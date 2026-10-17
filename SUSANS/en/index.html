@@ -1,1 +1,1242 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOPERA Reader Step25-1 Bookmark Menu Prototype</title>
+<style>
+:root{
+  --paper:#fffdf8; --ink:#24211d; --sub:#756f66; --line:#d9d2c7;
+  --bg:#e9e6df; --accent:#5f5140; --shadow:0 12px 36px rgba(44,38,30,.13);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:auto}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Yu Gothic","Hiragino Kaku Gothic ProN",sans-serif}
+button{font:inherit}
+.reader-shell{min-height:100vh}
+.reader-topbar{
+  position:sticky;top:0;z-index:30;display:flex;flex-direction:column;gap:7px;
+  padding:8px max(14px,calc((100vw - 840px)/2));background:rgba(248,246,241,.94);
+  border-bottom:1px solid var(--line);backdrop-filter:blur(10px)
+}
+.topbar-main{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.top-actions{display:flex;gap:8px;align-items:center}
+.reader-location{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:14px;
+  border-top:1px solid rgba(150,140,126,.24);padding-top:6px;color:#6f685f;font-size:13px
+}
+.reader-location .breadcrumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reader-location .page-count{flex:0 0 auto}
+.ui-btn{
+  min-height:38px;border:1px solid #bcb3a6;border-radius:9px;background:#fffdf8;color:#3d372f;
+  padding:7px 13px;cursor:pointer
+}
+.ui-btn:hover{background:#f3efe7}
+.ui-btn:disabled{opacity:.42;cursor:default}
+.sound-btn.is-on{background:#34302a;color:#fff;border-color:#34302a}
+.prototype-badge{font-size:11px;letter-spacing:.08em;color:var(--sub);white-space:nowrap;opacity:.8}
+.nopera-reader-brand{font-size:11px;letter-spacing:.08em;color:var(--sub);white-space:nowrap;opacity:.8}
+.paper{
+  width:min(820px,calc(100% - 28px));min-height:70vh;margin:24px auto 16px;background:var(--paper);
+  box-shadow:var(--shadow);border:1px solid rgba(130,117,98,.22);border-radius:3px;
+  padding:clamp(30px,6vw,62px) clamp(24px,7vw,72px) clamp(42px,7vw,70px)
+}
+.story-title{font-family:"Yu Mincho","Hiragino Mincho ProN",serif;text-align:center;font-size:clamp(24px,4vw,34px);margin:0 0 8px}
+.story-subtitle{text-align:center;color:var(--sub);margin:0 0 44px;font-family:"Yu Mincho","Hiragino Mincho ProN",serif}
+.reading{
+  white-space:pre-wrap;overflow-wrap:anywhere;line-height:2.05;font-size:18px;letter-spacing:.025em;
+  font-family:"Yu Mincho","Hiragino Mincho ProN",serif
+}
+.reading.gothic{font-family:"Yu Gothic","Hiragino Kaku Gothic ProN",sans-serif}
+.reading.serif{font-family:Georgia,"Times New Roman","Yu Mincho",serif}
+.heading{display:inline}
+.ill{display:block;margin:2.1em auto;clear:both}
+.ill img{display:block;width:100%;height:auto;border-radius:2px}
+.ill[data-align="left"]{float:left;margin:1em 1.5em 1em 0;clear:left}
+.ill[data-align="right"]{float:right;margin:1em 0 1em 1.5em;clear:right}
+.ill[data-align="center"]{float:none;margin:2.1em auto}
+.page-clear{clear:both}
+.reader-footer{
+  width:min(820px,calc(100% - 28px));margin:0 auto 42px;padding:10px 4px 24px
+}
+.breadcrumb{color:#6f685f;min-height:18px}
+.pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}
+.pager .prev{justify-self:start}.pager .next{justify-self:end}
+.page-count{font-variant-numeric:tabular-nums;color:#5d564e;white-space:nowrap}
+.empty{
+  min-height:48vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  color:#71695f;line-height:1.8
+}
 
+.prototype-page-nav{
+  position:fixed;left:14px;bottom:14px;z-index:40;display:flex;align-items:center;gap:6px;
+  background:rgba(46,42,37,.92);color:#fff;border-radius:999px;padding:6px 8px;
+  box-shadow:0 5px 20px rgba(0,0,0,.22);font-size:12px
+}
+.prototype-page-nav button{
+  width:32px;height:30px;border:0;border-radius:999px;background:#fffdf8;color:#2e2a25;
+  cursor:pointer;font:inherit;font-size:16px
+}
+.prototype-page-nav button:disabled{opacity:.35;cursor:default}
+.prototype-page-nav span{min-width:58px;text-align:center;white-space:nowrap}
+
+.prototype-loader{
+  position:fixed;right:14px;bottom:14px;z-index:40;background:#2e2a25;color:#fff;border:0;border-radius:999px;
+  padding:10px 14px;box-shadow:0 5px 20px rgba(0,0,0,.22);cursor:pointer;font-size:13px
+}
+.toc-backdrop{
+  position:fixed;inset:0;background:rgba(20,18,16,.45);z-index:50;display:none;padding:18px
+}
+.toc-backdrop.open{display:flex;align-items:center;justify-content:center}
+.toc-panel{
+  width:min(620px,100%);max-height:min(78vh,760px);overflow:auto;background:#fffdf8;border-radius:12px;
+  box-shadow:0 20px 70px rgba(0,0,0,.3);padding:20px
+}
+.toc-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:10px}
+.toc-head h2{font-size:20px;margin:0;font-family:"Yu Mincho",serif}
+.toc-close{border:0;background:transparent;font-size:26px;cursor:pointer;padding:0 7px}
+.toc-list{display:flex;flex-direction:column;gap:2px}
+.toc-item{border:0;background:transparent;text-align:left;padding:9px 10px;border-radius:7px;cursor:pointer;color:#39342e}
+.toc-item:hover{background:#eee9df}
+.toc-item.level-1{padding-left:10px;font-weight:700;font-size:1.02em}
+.toc-item.level-2{padding-left:34px;font-weight:600}
+.toc-item.level-3{padding-left:60px;font-size:.94em;color:#625b52}
+.toc-empty{padding:22px 8px;color:#7b746a;text-align:center}
+
+.text-backdrop{
+  position:fixed;inset:0;background:rgba(20,18,16,.45);z-index:55;display:none;padding:18px
+}
+.text-backdrop.open{display:flex;align-items:center;justify-content:center}
+.text-panel{
+  width:min(480px,100%);max-height:min(82vh,720px);overflow:auto;background:#fffdf8;border-radius:12px;
+  box-shadow:0 20px 70px rgba(0,0,0,.3);padding:20px
+}
+.text-head{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px}
+.text-head h2{font-size:20px;margin:0;font-family:"Yu Mincho",serif}
+.text-close{border:0;background:transparent;font-size:26px;cursor:pointer;padding:0 7px}
+.setting-group{padding:13px 0;border-bottom:1px solid #e7e1d7}
+.setting-group:last-of-type{border-bottom:0}
+.setting-label{display:block;font-size:13px;color:#6c655c;margin-bottom:9px}
+.setting-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.setting-value{min-width:72px;text-align:center;font-variant-numeric:tabular-nums}
+.choice-btn.is-selected{background:#34302a;color:#fff;border-color:#34302a}
+.reset-row{display:flex;justify-content:flex-end;margin-top:18px}
+.reset-btn{background:#f5f0e7}
+
+.bookmark-backdrop{
+  position:fixed;inset:0;background:rgba(20,18,16,.45);z-index:58;display:none;padding:18px
+}
+.bookmark-backdrop.open{display:flex;align-items:center;justify-content:center}
+.bookmark-panel{
+  width:min(430px,100%);background:#fffdf8;border-radius:12px;
+  box-shadow:0 20px 70px rgba(0,0,0,.3);padding:20px
+}
+.bookmark-head{
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px
+}
+.bookmark-head h2{font-size:20px;margin:0;font-family:"Yu Mincho",serif}
+.bookmark-close{border:0;background:transparent;font-size:26px;cursor:pointer;padding:0 7px}
+.bookmark-status{margin:0 0 14px;color:#6c655c;font-size:13px;line-height:1.7}
+.bookmark-actions{display:grid;gap:9px}
+.bookmark-actions .ui-btn{width:100%;text-align:center}
+.bookmark-remove{color:#7a3838}
+
+.toast{
+  position:fixed;left:50%;bottom:18px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:70;
+  background:#292622;color:#fff;padding:9px 14px;border-radius:9px;font-size:13px;transition:.2s
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.text-settings-label-short{display:none}
+@media(max-width:600px){
+  .text-settings-label-full{display:none}
+  .text-settings-label-short{display:inline}
+  .reader-topbar{gap:4px;padding:5px 8px}
+  .topbar-main{gap:5px}
+  .top-actions{flex-wrap:nowrap;min-width:0;gap:4px}
+  .top-actions .ui-btn{font-size:12px;line-height:1.2;padding:7px 6px;white-space:nowrap;border-radius:7px}
+  .top-actions .sound-btn{font-size:11px}
+  .nopera-reader-brand{font-size:9px}
+  .reader-location{padding-top:4px}
+  .prototype-badge{display:none}
+  .topbar-main{justify-content:space-between}.top-actions{justify-content:flex-start}
+  .reader-location{gap:8px;font-size:12px}
+  .paper{width:100%;margin:0;border-left:0;border-right:0;box-shadow:none;padding:30px 20px 42px}
+  .story-title{margin-top:6px}.story-subtitle{margin-bottom:34px}
+  .reading{font-size:16px;line-height:1.95}
+  .reader-footer{width:100%;padding:10px 14px 28px;margin-bottom:54px}
+  .ill[data-align="left"],.ill[data-align="right"]{float:none;margin:1.8em auto!important;max-width:100%!important}
+  .prototype-loader{right:10px;bottom:10px}
+  .prototype-page-nav{left:10px;bottom:10px}
+}
+
+@media(max-width:400px){.nopera-reader-brand{display:none}}
+/* =========================================================
+   Step24: JSON表紙 → 物語をはじめる → BOOK / OPERA → Reader
+   Generator Step22 の表紙設定・開始演出をReaderへ接続。
+   ========================================================= */
+.nopera-cover-gate{
+  position:fixed;inset:0;z-index:80;display:grid;place-items:center;
+  padding:clamp(16px,4vw,42px);background:#11100e;
+}
+.nopera-cover-gate[hidden],.nopera-start-experience[hidden],.nopera-start-scene[hidden]{display:none!important}
+.nopera-cover-stage{
+  position:relative;width:min(760px,92vw);height:min(78vh,650px);min-height:420px;
+  overflow:hidden;border-radius:10px;box-shadow:0 24px 80px rgba(0,0,0,.52);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  padding:clamp(38px,7vw,72px);color:#f3d889;
+}
+.nopera-cover-stage.is-book{background:var(--nopera-book-cover-color,#173f35)}
+.nopera-cover-stage.is-opera{
+  background:radial-gradient(circle at 50% 42%,#4b3b2b 0,#17120e 48%,#050505 100%);
+}
+.nopera-cover-copy{position:relative;z-index:8;display:flex;flex-direction:column;align-items:center;gap:14px;max-width:88%}
+.nopera-cover-title{font-weight:900;line-height:1.12;overflow-wrap:anywhere}
+.nopera-cover-subtitle{font-size:clamp(14px,2.4vw,20px);line-height:1.5}
+.nopera-cover-credits{display:grid;gap:4px;margin-top:8px;font-size:13px;line-height:1.55}
+.nopera-cover-start{
+  position:relative;z-index:9;margin-top:34px;min-width:180px;padding:11px 18px;
+  border:1px solid currentColor;border-radius:999px;background:rgba(0,0,0,.12);
+  color:inherit;font-weight:800;cursor:pointer;backdrop-filter:blur(4px)
+}
+.nopera-cover-start:hover{background:rgba(255,255,255,.10)}
+.nopera-book-frame-layer,.nopera-book-frame-inner{position:absolute;pointer-events:none}
+.nopera-book-frame-layer{inset:14px;border:1px solid currentColor;border-radius:4px;opacity:.82}
+.nopera-book-frame-inner{inset:7px}
+.book-frame-double .nopera-book-frame-layer{inset:12px;border:2px solid currentColor;border-radius:5px;opacity:.88}
+.book-frame-double .nopera-book-frame-inner{border:1px solid currentColor;border-radius:3px;opacity:.58}
+.book-frame-classic .nopera-book-frame-layer{
+  inset:11px;border:2px solid currentColor;clip-path:polygon(0 10%,4% 10%,4% 4%,10% 4%,10% 0,90% 0,90% 4%,96% 4%,96% 10%,100% 10%,100% 90%,96% 90%,96% 96%,90% 96%,90% 100%,10% 100%,10% 96%,4% 96%,4% 90%,0 90%);opacity:.9
+}
+.book-frame-classic .nopera-book-frame-inner{inset:10px;border:1px solid currentColor;border-radius:2px;opacity:.5}
+.book-frame-arched .nopera-book-frame-layer{inset:12px;border:2px solid currentColor;border-radius:48% 48% 12px 12px/12% 12% 5% 5%;opacity:.86}
+.book-frame-arched .nopera-book-frame-inner{inset:8px;border:1px solid currentColor;border-radius:46% 46% 9px 9px/11% 11% 4% 4%;opacity:.48}
+.book-frame-geometric .nopera-book-frame-layer{inset:10px;border:2px solid currentColor;clip-path:polygon(7% 0,93% 0,100% 7%,100% 93%,93% 100%,7% 100%,0 93%,0 7%);opacity:.9}
+.book-frame-geometric .nopera-book-frame-inner{inset:9px;border:1px solid currentColor;clip-path:polygon(5% 0,95% 0,100% 5%,100% 95%,95% 100%,5% 100%,0 95%,0 5%);opacity:.5}
+.book-frame-japanese .nopera-book-frame-layer{inset:13px 16px;border-top:1px solid currentColor;border-bottom:1px solid currentColor;opacity:.78}
+.book-frame-japanese .nopera-book-frame-layer::before,.book-frame-japanese .nopera-book-frame-layer::after{content:"";position:absolute;top:0;bottom:0;width:1px;background:currentColor;opacity:.8}
+.book-frame-japanese .nopera-book-frame-layer::before{left:9px}.book-frame-japanese .nopera-book-frame-layer::after{right:9px}
+.book-frame-japanese .nopera-book-frame-inner{inset:7px 0;border-top:1px solid currentColor;border-bottom:1px solid currentColor;opacity:.36}
+.nopera-cover-curtain{display:none}
+.nopera-cover-stage.is-opera .nopera-cover-curtain{
+  display:block;position:absolute;top:0;bottom:0;width:53%;z-index:2;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.08) 0 10px,rgba(0,0,0,.16) 10px 22px),var(--nopera-start-curtain,#741c28);
+  border-bottom:5px solid #d6b85f;opacity:.72
+}
+.nopera-cover-stage.is-opera .nopera-cover-curtain.left{left:0}.nopera-cover-stage.is-opera .nopera-cover-curtain.right{right:0}
+
+/* Generator由来の開始演出 */
+.nopera-start-experience{
+  position:fixed;inset:0;z-index:90;overflow:hidden;background:#050608;
+}
+.nopera-start-scene{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.nopera-start-copy{
+  position:relative;z-index:6;display:flex;flex-direction:column;align-items:center;gap:12px;
+  max-width:86%;text-align:center;pointer-events:none
+}
+.nopera-start-title{max-width:100%;font-weight:900;line-height:1.1;overflow-wrap:anywhere}
+.nopera-start-subtitle{font-size:clamp(14px,2.3vw,20px);line-height:1.5}
+.nopera-start-credits{display:grid;gap:3px;margin-top:8px;font-size:13px;line-height:1.5}
+.nopera-start-book{perspective:1500px;background:radial-gradient(circle at 50% 40%,#202633 0,#090b10 58%,#020203 100%)}
+.nopera-start-book-wrap{position:relative;width:min(86%,760px);aspect-ratio:8/5;perspective:1500px;transform:translateX(-25%);transition:transform 1.55s cubic-bezier(.55,.08,.28,.96)}
+.nopera-start-book-pages{position:absolute;top:0;right:0;width:50%;height:100%;border-radius:5px 10px 10px 5px;background:#eee7d6;box-shadow:0 20px 45px rgba(0,0,0,.5);transform-style:preserve-3d}
+.nopera-start-book-inside{position:absolute;inset:8px 8px 8px 12px;display:grid;place-content:center;gap:8px;border:1px solid #c8bea9;border-radius:4px;color:#312d26;background:linear-gradient(90deg,#d8cfbd 0,#f4eedf 8%,#f8f2e5 100%);text-align:center}
+.nopera-start-book-cover{position:absolute;inset:0;z-index:4;border-radius:5px 10px 10px 5px;transform-origin:0 50%;transform-style:preserve-3d;background:transparent;box-shadow:8px 8px 20px rgba(0,0,0,.32)}
+.nopera-start-book-face{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;border-radius:inherit;backface-visibility:hidden;background:var(--nopera-book-cover-color,#173f35)}
+.nopera-start-book-front{transform:rotateY(0deg);box-shadow:inset -12px 0 22px rgba(0,0,0,.18)}
+.nopera-start-book-back{transform:rotateY(180deg);box-shadow:inset 12px 0 22px rgba(0,0,0,.22)}
+.nopera-start-book-inner-border{position:absolute;inset:18px;border:1px solid rgba(214,184,95,.52);border-radius:4px}
+.nopera-start-book-border{position:absolute;inset:18px;border:2px solid #d6b85f;border-radius:4px;pointer-events:none}
+.book-frame-single .nopera-start-book-border,.book-frame-double .nopera-start-book-border,.book-frame-classic .nopera-start-book-border,.book-frame-arched .nopera-start-book-border,.book-frame-geometric .nopera-start-book-border,.book-frame-japanese .nopera-start-book-border{border-color:transparent!important}
+.nopera-start-book.is-opening .nopera-start-book-wrap{transform:translateX(0)}
+.nopera-start-book.is-opening .nopera-start-book-cover{animation:noperaBookOpen 1.65s cubic-bezier(.55,.08,.28,.96) forwards}
+@keyframes noperaBookOpen{0%{transform:rotateY(0deg)}100%{transform:rotateY(-158deg)}}
+.nopera-start-opera{background:#080604}
+.nopera-start-opera-light{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 46%,rgba(255,225,157,.38) 0,rgba(115,73,37,.16) 35%,transparent 66%)}
+.nopera-start-opera-curtain{position:absolute;top:0;bottom:0;z-index:5;width:52%;background:repeating-linear-gradient(90deg,rgba(255,255,255,.07) 0 13px,rgba(0,0,0,.18) 13px 28px),var(--nopera-start-curtain,#741c28);border-bottom:5px solid #d6b85f;box-shadow:0 0 26px rgba(0,0,0,.5)}
+.nopera-start-opera-curtain.left{left:0}.nopera-start-opera-curtain.right{right:0}
+.nopera-start-opera-valance{position:absolute;top:0;left:0;right:0;z-index:7;height:22%;background:repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 18px,rgba(0,0,0,.15) 18px 38px),var(--nopera-start-curtain,#741c28);border-bottom:5px solid #d6b85f;box-shadow:0 8px 22px rgba(0,0,0,.35)}
+.nopera-start-opera-copy{color:#f8e7b0;transition:opacity .55s ease}
+.nopera-start-opera.is-opening .nopera-start-opera-curtain.left{animation:noperaCurtainLeft 1.7s cubic-bezier(.45,.05,.2,1) forwards}
+.nopera-start-opera.is-opening .nopera-start-opera-curtain.right{animation:noperaCurtainRight 1.7s cubic-bezier(.45,.05,.2,1) forwards}
+.nopera-start-opera.is-opening .nopera-start-opera-valance{animation:noperaValanceUp 1.7s cubic-bezier(.45,.05,.2,1) forwards}
+.nopera-start-opera.is-opening .nopera-start-opera-copy{opacity:0}
+@keyframes noperaCurtainLeft{to{transform:translateX(-94%)}}@keyframes noperaCurtainRight{to{transform:translateX(94%)}}@keyframes noperaValanceUp{to{transform:translateY(-92%)}}
+.nopera-start-experience.is-finishing{animation:noperaStartFade .5s ease forwards}@keyframes noperaStartFade{to{opacity:0}}
+.nopera-start-opera.opera-style-grand .nopera-start-opera-curtain,.nopera-start-opera.opera-style-grand .nopera-start-opera-valance{background:repeating-linear-gradient(90deg,rgba(255,255,255,.10) 0 10px,rgba(0,0,0,.22) 10px 24px),var(--nopera-start-curtain,#741c28);border-bottom-width:7px;box-shadow:inset 0 0 26px rgba(0,0,0,.38),0 8px 24px rgba(0,0,0,.42)}
+.nopera-start-opera.opera-style-soft .nopera-start-opera-curtain,.nopera-start-opera.opera-style-soft .nopera-start-opera-valance{background:repeating-linear-gradient(90deg,rgba(255,255,255,.07) 0 19px,rgba(0,0,0,.11) 19px 40px),var(--nopera-start-curtain,#741c28);border-bottom-width:3px;filter:saturate(.82) brightness(1.08)}
+.nopera-start-opera.opera-style-dark .nopera-start-opera-curtain,.nopera-start-opera.opera-style-dark .nopera-start-opera-valance{background:linear-gradient(rgba(0,0,0,.34),rgba(0,0,0,.34)),repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 12px,rgba(0,0,0,.24) 12px 28px),var(--nopera-start-curtain,#741c28);border-bottom-color:rgba(214,184,95,.58)!important}
+.nopera-start-opera.opera-style-modern .nopera-start-opera-curtain,.nopera-start-opera.opera-style-modern .nopera-start-opera-valance{background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(0,0,0,.09)),var(--nopera-start-curtain,#741c28);border-bottom-width:2px;box-shadow:none}
+.nopera-start-opera.opera-style-modern .nopera-start-opera-valance{height:15%}
+@media(max-width:640px){
+  .nopera-cover-stage{width:94vw;height:82vh;min-height:360px;padding:34px 22px}
+  .nopera-start-book-wrap{width:min(78%,330px)}
+}
+@media(prefers-reduced-motion:reduce){
+  .nopera-start-book.is-opening .nopera-start-book-cover,
+  .nopera-start-opera.is-opening .nopera-start-opera-curtain.left,
+  .nopera-start-opera.is-opening .nopera-start-opera-curtain.right,
+  .nopera-start-opera.is-opening .nopera-start-opera-valance,
+  .nopera-start-experience.is-finishing{animation-duration:.01ms!important}
+}
+
+
+    .toc-cover-item{
+      font-weight:800;
+      margin-bottom:8px;
+      border-bottom:1px solid #ddd4c6;
+    }
+
+
+/* Public output: prototype-only controls remain inert and hidden. */
+.prototype-badge,.prototype-page-nav,.prototype-loader{display:none!important}
+</style>
+</head>
+<body>
+<div class="reader-shell">
+  <header class="reader-topbar">
+    <div class="topbar-main">
+      <div class="top-actions">
+        <button id="tocButton" class="ui-btn" type="button">目次</button>
+        <button id="headerPrevButton" class="ui-btn" type="button" disabled>＜ 前へ</button>
+        <button id="textSettingsButton" class="ui-btn" type="button" aria-label="文字設定"><span class="text-settings-label-full">文字設定</span><span class="text-settings-label-short" aria-hidden="true">文字</span></button>
+        <button id="bookmarkButton" class="ui-btn" type="button" disabled>しおり</button>
+        <button id="soundButton" class="ui-btn sound-btn" type="button" aria-pressed="false">SOUND OFF</button>
+      </div>
+      <div class="nopera-reader-brand" aria-label="NOPERAで制作された作品">NOPERA</div>
+    </div>
+    <div class="reader-location">
+      <div id="breadcrumb" class="breadcrumb">現在地：—</div>
+      <div id="pageCount" class="page-count">0 / 0 ページ</div>
+    </div>
+  </header>
+
+  <main id="paper" class="paper">
+    <h1 id="storyTitle" class="story-title">NOPERA</h1>
+    <p id="storySubtitle" class="story-subtitle">完成NOPERA 読書画面プロトタイプ</p>
+    <div id="reading" class="reading">
+      <div class="empty">
+        <strong>右下の［プロジェクトを読む］から、現在のNOPERAプロジェクトを読み込めます。</strong>
+        <span>Generator本体やプロジェクトファイルは変更しません。</span>
+      </div>
+    </div>
+    <div class="page-clear"></div>
+  </main>
+
+  <footer class="reader-footer">
+    <div class="pager">
+      <button id="prevButton" class="ui-btn prev" type="button" disabled>前へ</button>
+      <button id="nextButton" class="ui-btn next" type="button" disabled>次へ</button>
+    </div>
+  </footer>
+</div>
+
+
+<div id="noperaCoverGate" class="nopera-cover-gate" hidden aria-hidden="true">
+  <section id="noperaCoverStage" class="nopera-cover-stage is-book" aria-label="NOPERA表紙">
+    <div class="nopera-cover-curtain left"></div>
+    <div class="nopera-cover-curtain right"></div>
+    <div class="nopera-book-frame-layer" aria-hidden="true"><span class="nopera-book-frame-inner"></span></div>
+    <div class="nopera-cover-copy">
+      <div id="noperaCoverTitle" class="nopera-cover-title"></div>
+      <div id="noperaCoverSubtitle" class="nopera-cover-subtitle"></div>
+      <div id="noperaCoverCredits" class="nopera-cover-credits"></div>
+      <button id="noperaCoverStart" class="nopera-cover-start" type="button">物語をはじめる</button>
+      <button id="noperaBookmarkResume" class="nopera-cover-start" type="button" hidden>しおりから読む</button>
+    </div>
+  </section>
+</div>
+
+<div id="noperaStartExperience" class="nopera-start-experience" hidden aria-hidden="true">
+  <div id="noperaStartBook" class="nopera-start-scene nopera-start-book" hidden>
+    <div class="nopera-start-book-wrap">
+      <div class="nopera-start-book-pages">
+        <div class="nopera-start-book-inside" aria-hidden="true"></div>
+        <div id="noperaStartBookCover" class="nopera-start-book-cover">
+          <div class="nopera-start-book-face nopera-start-book-front">
+            <div class="nopera-start-book-border"></div>
+            <div class="nopera-book-frame-layer" aria-hidden="true"><span class="nopera-book-frame-inner"></span></div>
+            <div class="nopera-start-copy">
+              <div id="noperaStartBookTitle" class="nopera-start-title"></div>
+              <div id="noperaStartBookSubtitle" class="nopera-start-subtitle"></div>
+              <div id="noperaStartBookCredits" class="nopera-start-credits"></div>
+            </div>
+          </div>
+          <div class="nopera-start-book-face nopera-start-book-back" aria-hidden="true">
+            <div class="nopera-start-book-inner-border"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="noperaStartOpera" class="nopera-start-scene nopera-start-opera" hidden>
+    <div class="nopera-start-opera-light"></div>
+    <div id="noperaStartOperaLeft" class="nopera-start-opera-curtain left"></div>
+    <div id="noperaStartOperaRight" class="nopera-start-opera-curtain right"></div>
+    <div id="noperaStartOperaValance" class="nopera-start-opera-valance"></div>
+    <div class="nopera-start-copy nopera-start-opera-copy">
+      <div id="noperaStartOperaTitle" class="nopera-start-title"></div>
+      <div id="noperaStartOperaSubtitle" class="nopera-start-subtitle"></div>
+      <div id="noperaStartOperaCredits" class="nopera-start-credits"></div>
+    </div>
+  </div>
+</div>
+
+<input id="projectInput" type="file" accept=".json,.nopera-project.json,application/json" hidden>
+
+<div class="prototype-page-nav" aria-label="試作版ページ確認">
+  <button id="testPrevButton" type="button" aria-label="前のページを確認">‹</button>
+  <span id="testPageCount">0 / 0</span>
+  <button id="testNextButton" type="button" aria-label="次のページを確認">›</button>
+</div>
+
+<button id="loadButton" class="prototype-loader" type="button">プロジェクトを読む</button>
+
+<div id="tocBackdrop" class="toc-backdrop" aria-hidden="true">
+  <section class="toc-panel" role="dialog" aria-modal="true" aria-labelledby="tocTitle">
+    <div class="toc-head"><h2 id="tocTitle">目次</h2><button id="tocClose" class="toc-close" type="button" aria-label="閉じる">×</button></div>
+    <div id="tocList" class="toc-list"></div>
+  </section>
+</div>
+
+<div id="bookmarkBackdrop" class="bookmark-backdrop" aria-hidden="true">
+  <section class="bookmark-panel" role="dialog" aria-modal="true" aria-labelledby="bookmarkTitle">
+    <div class="bookmark-head">
+      <h2 id="bookmarkTitle">しおり</h2>
+      <button id="bookmarkClose" class="bookmark-close" type="button" aria-label="閉じる">×</button>
+    </div>
+    <p id="bookmarkStatus" class="bookmark-status">しおりはまだありません。</p>
+    <div class="bookmark-actions">
+      <button id="bookmarkSaveHere" class="ui-btn" type="button">このページにしおりを挟む</button>
+      <button id="bookmarkJump" class="ui-btn" type="button" disabled>しおりへ移動</button>
+      <button id="bookmarkRemove" class="ui-btn bookmark-remove" type="button" disabled>しおりを外す</button>
+    </div>
+  </section>
+</div>
+
+<div id="textBackdrop" class="text-backdrop" aria-hidden="true">
+  <section class="text-panel" role="dialog" aria-modal="true" aria-labelledby="textSettingsTitle">
+    <div class="text-head">
+      <h2 id="textSettingsTitle">文字設定</h2>
+      <button id="textSettingsClose" class="text-close" type="button" aria-label="閉じる">×</button>
+    </div>
+
+    <div class="setting-group">
+      <span class="setting-label">文字サイズ</span>
+      <div class="setting-row">
+        <button id="fontSizeDown" class="ui-btn" type="button" aria-label="文字を小さくする">− 小さく</button>
+        <span id="fontSizeValue" class="setting-value">作者設定</span>
+        <button id="fontSizeUp" class="ui-btn" type="button" aria-label="文字を大きくする">大きく ＋</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <span class="setting-label">フォント</span>
+      <div class="setting-row">
+        <button class="ui-btn choice-btn" type="button" data-reader-font="mincho">明朝</button>
+        <button class="ui-btn choice-btn" type="button" data-reader-font="gothic">ゴシック</button>
+        <button class="ui-btn choice-btn" type="button" data-reader-font="serif">洋書系</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <span class="setting-label">文字の太さ</span>
+      <div class="setting-row">
+        <button class="ui-btn choice-btn" type="button" data-reader-weight="normal">標準</button>
+        <button class="ui-btn choice-btn" type="button" data-reader-weight="600">太め</button>
+      </div>
+    </div>
+
+    <div class="reset-row">
+      <button id="resetAuthorTextSettings" class="ui-btn reset-btn" type="button">作者設定に戻す</button>
+    </div>
+  </section>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script id="nopera-public-project" type="application/json">{"format":"NOPERA_TEMP_PROJECT","formatVersion":3,"savedAt":"2026-10-17T17:49:08.910Z","manuscript":{"fullText":"Part I — The Ancient Age\n\nChapter 1 — The Age of Gods\n\nSection 1 — Prologue\n\nLong, long ago—before the world had taken the shape we know today.\n\n  There existed a primordial force known as Wol—the source of all existence.\n  From Wol, three supreme gods were born in the heavens.\n\n  One was the God of Creation, who brought all things into being.\n  Another was the God of Destruction, who brought an end to that which had been created.\n  And the third was the God of Harmony, who reconciled the two and maintained the balance of the world.\n\n  Through the endless cycle of creation, destruction, and the harmony between them, the three supreme gods shaped the foundations of the world.\n  From this ceaseless interplay, the many forces and concepts that govern existence gradually emerged, and with them came the gods who presided over each.\n  And in time, countless forms of life were brought into being, among them humankind.\n\n  Yet even the gods could not exist for eternity merely by virtue of their divinity.\n  Those who received no faith from the beings of the world would gradually lose their power and eventually fade from existence, while those who inspired deep devotion could preserve their strength.\n\n  Thus, what the gods sought from the inhabitants of the world was faith—pure and unwavering. At times, even the gods themselves would come into conflict over the devotion of those who worshipped them.\n\n  —The Continent of Susans.\n\n  A vast land in the material realm, where humankind and countless other forms of life had been brought into existence.\n  Yet this land had not existed since the beginning of time.\n  In an age long forgotten, the continent was created to imprison a god who held dominion over Time itself.\n\n  That god's name was—Suseons.\n\n  And the land that sealed away this god was none other than the Continent of Susans—the stage upon which the story we are about to tell would unfold.\n\nSection 2 — Alvardine\n\n  The heavenly realm, where the gods dwelled.\n\n  Two young deities had been summoned there.\n  The elder brother was Apollon Dice.\n  His younger sister was Altemisha Lua.\n  Together, they were the brother and sister gods who presided over light and fate.\n\n  Before them hung a white lace curtain, stretching from ceiling to floor. Beyond it were the three supreme gods who had existed since the beginning of the world—the gods of Creation, Destruction, and Harmony.\n\n  Yet their forms remained unseen.\n  Even among the inhabitants of the heavenly realm, few had ever laid eyes upon the three supreme gods. Apollon and Altemisha stood before the white curtain, waiting for a voice to emerge from beyond it.\n\n  At last, a gentle voice broke the silence.\n\n“I have brought so many things into existence.”\n  It was the voice of Alvardine, the God of Creation.\n“You two as well. And—Suseons, my child.”\n  Her voice fell silent for a moment.\n\n“But the power Suseons wielded was beyond anything we had imagined. He became consumed by that power, and in time, sought to claim all of the heavenly realm for himself.”\n\n  The white curtain remained perfectly still.\n\n“Even we could not escape the power of time.”\n  Apollon raised his eyes.\n  Beside him, Altemisha turned her head slightly.\n\n“Over many long years, Suseons had been using his power over time against us. Little by little… so slowly that even we ourselves failed to notice—perhaps it should be called the Curse of Time.”\n  Silence fell once more.\n\n“By the time we realized what was happening, it was already—”\n  Her words broke off.\n\n  At last, Alvardine's voice broke the silence.\n“Suseons seeks to cast us aside and become the ruler of the heavenly realm. But as we are now, we no longer possess the strength to stand against his power.”\n  Apollon and Altemisha remained silent, their eyes fixed upon the white curtain.\n\n“That is why I summoned you.”\n  It was then that something happened.\n  The white lace stirred ever so slightly, and a narrow opening appeared at its center.\n  Slowly, a hand emerged through the gap.\n\n  Apollon's gaze settled upon the hand.   \n  Altemisha, too, remained motionless.\n  Both deities knew that hand.\n  The hand of Alvardine, the God of Creation, as they had once seen it, had been fair, youthful, and full of life.\n\n  The mother of all things, who had brought everything into existence. Alvardine, the God of Creation, the very source of life itself.\n\n  But the hand now extended before them was thin and deeply wrinkled, like that of an elderly human woman who had lived through countless years.\n  And upon that hand rested a sword.\n  A pale blue light pulsed along its blade.\n\n  From beyond the white curtain came Alvardine's voice.\n\n“This sword holds what remains of my power.”\n  Apollon's gaze shifted from the aged hand to the sword.\n“Only the power of a god can stand against the power of a god. This sword shall wield that power in my stead.”\n\n  A brief silence followed.\n\n“With this sword, which shall take my place—”\nHer voice broke off once more.\n“Strike down Suseons.”\n\n  Apollon reached for the sword.\n  But his fingers hesitated.\n  His gaze shifted from the blade to the deeply wrinkled hand that held it—and at last, Apollon accepted the pale blue, glowing sword with both hands.\n\n  “Sar Alvardi…”\n\n  The whispered name echoed through the white chamber.\n  In the language of the gods—Alvardine's Proxy.\n\n  As the sword passed into Apollon's hands, the wrinkled hand slowly withdrew beyond the white lace, and the curtain closed once more.\n  Nothing more could be heard from beyond it.\n\nSection 3 — Suseons\n\n  The divine siblings who governed light and fate, Apollon Dice and Altemisha Lua, appeared once more before the three supreme gods. Their appearances bore the marks of the fierce battle they had just endured.\n  The change in Apollon was especially striking.   \n  Deep wrinkles now lined his once-youthful face, and the passage of time had left its mark upon his hair as well. The god who had appeared as a young man only moments before now looked like a man in middle age. Altemisha, standing beside him, showed no such dramatic change. It was clear that her brother had shielded her from the worst of it.\n  Even gods were not eternal.\n  Suseons's “Curse of Time” had indeed taken its toll on Apollon.\n\n“It seems you were unable to destroy Suseons.”\n  A deep voice echoed from beyond the white curtain.\n\n  Apollon did not answer.\n  In his hand, he held the sword that glowed with a pale blue light—Sar Alvardi.\n“With that sword, you should have been able to strike down my child.”\n  This time, it was Alvardine who spoke.\n\n  The siblings remained silent, their heads bowed.\n  After a long silence, Apollon finally spoke.\n“Suseons has left the heavenly realm and fled into the material realm.”\n“Then he must be pursued.”\n  The same deep voice answered without hesitation.\n\n“If we allow him to live, he will eventually gather worshippers among the inhabitants of the material realm and regain his power. Then he will repeat what he has done before.”\n  Another voice continued quietly.\n“And if he should find a suitable ‘vessel’ for himself in the material realm… he will become far more difficult to stop.”\n  Apollon said nothing, and Altemisha remained silent beside her brother.\n\n“Why did you not strike him down?”\n  The deep voice questioned him once more.\n  Apollon's hand moved ever so slightly.\n  A pale blue light coursed through Sar Alvardi in his grasp, and Apollon lowered his gaze to the sword.\n“This sword… was entrusted with the power of Mother Alvardine.”\n  With those words, Apollon fell silent.\n  No answer came from beyond the white curtain.\n“And yet—”\n  Apollon raised his head.\n“If we erase Suseons from existence, we may forever lose the means to break the ‘Curse of Time’.”\n\n　Silence.\n\n  Apollon's gaze turned toward the white lace, but the supreme gods gave no answer. Nor did the deeply wrinkled hand he had seen earlier appear again from beyond the curtain.\n\n“We will go to the material realm.”\n  It was Apollon who broke the silence.\n“We will catch up with Suseons before he can find a vessel, and seal him away within the material realm.”\n  Altemisha, standing beside him, quietly looked at her brother before turning to face the white curtain, just as Apollon had.\n“So that he may never wield that power again.”\n  For a while, no one spoke.\n\n  At last, a voice came from beyond the white curtain.\n“…Go.”\n  It was Alvardine's voice.\n\n＊\n\n  The material realm.\n  A world inhabited by humans and countless other forms of life. The faith of those who lived there was also a source of power for the gods.\n  Driven from the heavenly realm and stripped of his power, Suseons had sought refuge here to gather the faith of this world's inhabitants and reclaim the power he had lost.\n  And in this world, there was not yet a continent known as “Susans.”\n\n  A tiny black hole appeared in the clear blue sky.\n  At first, it was no more than a speck, but it slowly widened. Before long, smoke tinged with blue light began to seep from its depths, hissing—hiss, hiss.\n  Accompanied by a low rumble, the smoke poured forth without end, spreading until it began to engulf the once-clear blue sky.\n  The winds grew violent, the sea began to churn, and soon enormous waves crashed against one another.\n  As sky and sea raged, the black hole continued to expand.\n\n  Several days passed.\n  And at last, an enormous sphere emerged from the depths of the hole.\n  A sphere as black as darkness itself, its surface shrouded in a faint blue glow.\n  Suseons—the God of Time.\n\n  The battle in the heavenly realm had already robbed him of much of his power. And for gods to remain in the material realm, they had to find a suitable “vessel” within this world.\n  The black sphere, wreathed in blue light, drifted slowly through the raging sky—seeking a vessel of his own, so that he might regain his power through the faith of those who dwelled there.\n\n  But before long, the black hole behind him began to glow once more, and two lights burst forth.\n  Apollon Dice and Altemisha Lua—the divine siblings had caught up with Suseons before he could find a vessel of his own in this world.\n\n  Three lights clashed in the raging sky, and once more, a battle among the gods began.\n  Each time the powers of the three gods collided, the heavens trembled, the seas split apart, and blue flashes illuminated the world.\n  But Suseons no longer possessed the power he once had, and this battle did not last nearly as long as the desperate struggle that had unfolded in the heavenly realm.\n  The siblings pursued the fleeing Suseons and finally cornered him. At last, the blue light surrounding the black sphere faded away. All that remained was a sphere of utter darkness, stripped of its light.\n\n  Apollon and Altemisha forced the sphere down into the sea. The waters parted, and the seabed split open with a thunderous roar. Suseons sank into the depths of the vast fissure.　  \n  As the lights of the two gods converged above the fissure, the seabed began to rise, and enormous masses of rock closed over Suseons—thus, the God of Time was sealed away deep beneath the earth of the material realm.\n\n  When it was all over, the raging sea gradually returned to calm.\n  But something now stood where nothing had existed before.\n  In the midst of the vast ocean, an enormous continent had been born. A colossal seal created to prevent the God of Time, who lay dormant deep beneath the earth, from ever emerging into the world again.\n  In essence, the continent itself was the “Gate of Sealing.”\n\n＊\n\n  A long time passed.\n  In time, people would come to inhabit the continent, kingdoms would rise, and countless stories would unfold.\n  And eventually, the people came to name the continent after the god sealed deep beneath the earth—Suseons.\n  The continent of “Susans.” \n  And thus, the stage was set for this story.\n\n\n第二章\t英雄たちの時代\n\n\n\n\n【この章の登場人物】\n\n\n\n","pages":[{"id":"page-root","text":"Part I — The Ancient Age\n\n"},{"id":"page-toc-2","text":"Chapter 1 — The Age of Gods\n\nSection 1 — Prologue\n\nLong, long ago—before the world had taken the shape we know today.\n\n  There existed a primordial force known as Wol—the source of all existence.\n  From Wol, three supreme gods were born in the heavens.\n\n  One was the God of Creation, who brought all things into being.\n  Another was the God of Destruction, who brought an end to that which had been created.\n  And the third was the God of Harmony, who reconciled the two and maintained the balance of the world.\n\n  Through the endless cycle of creation, destruction, and the harmony between them, the three supreme gods shaped the foundations of the world.\n  From this ceaseless interplay, the many forces and concepts that govern existence gradually emerged, and with them came the gods who presided over each.\n  And in time, countless forms of life were brought into being, among them humankind.\n\n  Yet even the gods could not exist for eternity merely by virtue of their divinity.\n  Those who received no faith from the beings of the world would gradually lose their power and eventually fade from existence, while those who inspired deep devotion could preserve their strength.\n\n  Thus, what the gods sought from the inhabitants of the world was faith—pure and unwavering. At times, even the gods themselves would come into conflict over the devotion of those who worshipped them.\n\n  —The Continent of Susans.\n\n  A vast land in the material realm, where humankind and countless other forms of life had been brought into existence.\n  Yet this land had not existed since the beginning of time.\n  In an age long forgotten, the continent was created to imprison a god who held dominion over Time itself.\n\n  That god's name was—Suseons.\n\n  And the land that sealed away this god was none other than the Continent of Susans—the stage upon which the story we are about to tell would unfold.\n\n"},{"id":"page-toc-4","text":"Section 2 — Alvardine\n\n  The heavenly realm, where the gods dwelled.\n\n  Two young deities had been summoned there.\n  The elder brother was Apollon Dice.\n  His younger sister was Altemisha Lua.\n  Together, they were the brother and sister gods who presided over light and fate.\n\n  Before them hung a white lace curtain, stretching from ceiling to floor. Beyond it were the three supreme gods who had existed since the beginning of the world—the gods of Creation, Destruction, and Harmony.\n\n  Yet their forms remained unseen.\n  Even among the inhabitants of the heavenly realm, few had ever laid eyes upon the three supreme gods. Apollon and Altemisha stood before the white curtain, waiting for a voice to emerge from beyond it.\n\n  At last, a gentle voice broke the silence.\n\n“I have brought so many things into existence.”\n  It was the voice of Alvardine, the God of Creation.\n“You two as well. And—Suseons, my child.”\n  Her voice fell silent for a moment.\n\n“But the power Suseons wielded was beyond anything we had imagined. He became consumed by that power, and in time, sought to claim all of the heavenly realm for himself.”\n\n  The white curtain remained perfectly still.\n\n“Even we could not escape the power of time.”\n  Apollon raised his eyes.\n  Beside him, Altemisha turned her head slightly.\n\n“Over many long years, Suseons had been using his power over time against us. Little by little… so slowly that even we ourselves failed to notice—perhaps it should be called the Curse of Time.”\n  Silence fell once more.\n\n“By the time we realized what was happening, it was already—”\n  Her words broke off.\n\n  At last, Alvardine's voice broke the silence.\n“Suseons seeks to cast us aside and become the ruler of the heavenly realm. But as we are now, we no longer possess the strength to stand against his power.”\n  Apollon and Altemisha remained silent, their eyes fixed upon the white curtain.\n\n“That is why I summoned you.”\n  It was then that something happened.\n  The white lace stirred ever so slightly, and a narrow opening appeared at its center.\n  Slowly, a hand emerged through the gap.\n\n  Apollon's gaze settled upon the hand.   \n  Altemisha, too, remained motionless.\n  Both deities knew that hand.\n  The hand of Alvardine, the God of Creation, as they had once seen it, had been fair, youthful, and full of life.\n\n  The mother of all things, who had brought everything into existence. Alvardine, the God of Creation, the very source of life itself.\n\n  But the hand now extended before them was thin and deeply wrinkled, like that of an elderly human woman who had lived through countless years.\n  And upon that hand rested a sword.\n  A pale blue light pulsed along its blade.\n\n  From beyond the white curtain came Alvardine's voice.\n\n“This sword holds what remains of my power.”\n  Apollon's gaze shifted from the aged hand to the sword.\n“Only the power of a god can stand against the power of a god. This sword shall wield that power in my stead.”\n\n  A brief silence followed.\n\n“With this sword, which shall take my place—”\nHer voice broke off once more.\n“Strike down Suseons.”\n\n  Apollon reached for the sword.\n  But his fingers hesitated.\n  His gaze shifted from the blade to the deeply wrinkled hand that held it—and at last, Apollon accepted the pale blue, glowing sword with both hands.\n\n  “Sar Alvardi…”\n\n  The whispered name echoed through the white chamber.\n  In the language of the gods—Alvardine's Proxy.\n\n  As the sword passed into Apollon's hands, the wrinkled hand slowly withdrew beyond the white lace, and the curtain closed once more.\n  Nothing more could be heard from beyond it.\n\n"},{"id":"page-toc-5","text":"Section 3 — Suseons\n\n  The divine siblings who governed light and fate, Apollon Dice and Altemisha Lua, appeared once more before the three supreme gods. Their appearances bore the marks of the fierce battle they had just endured.\n  The change in Apollon was especially striking.   \n  Deep wrinkles now lined his once-youthful face, and the passage of time had left its mark upon his hair as well. The god who had appeared as a young man only moments before now looked like a man in middle age. Altemisha, standing beside him, showed no such dramatic change. It was clear that her brother had shielded her from the worst of it.\n  Even gods were not eternal.\n  Suseons's “Curse of Time” had indeed taken its toll on Apollon.\n\n“It seems you were unable to destroy Suseons.”\n  A deep voice echoed from beyond the white curtain.\n\n  Apollon did not answer.\n  In his hand, he held the sword that glowed with a pale blue light—Sar Alvardi.\n“With that sword, you should have been able to strike down my child.”\n  This time, it was Alvardine who spoke.\n\n  The siblings remained silent, their heads bowed.\n  After a long silence, Apollon finally spoke.\n“Suseons has left the heavenly realm and fled into the material realm.”\n“Then he must be pursued.”\n  The same deep voice answered without hesitation.\n\n“If we allow him to live, he will eventually gather worshippers among the inhabitants of the material realm and regain his power. Then he will repeat what he has done before.”\n  Another voice continued quietly.\n“And if he should find a suitable ‘vessel’ for himself in the material realm… he will become far more difficult to stop.”\n  Apollon said nothing, and Altemisha remained silent beside her brother.\n\n“Why did you not strike him down?”\n  The deep voice questioned him once more.\n  Apollon's hand moved ever so slightly.\n  A pale blue light coursed through Sar Alvardi in his grasp, and Apollon lowered his gaze to the sword.\n“This sword… was entrusted with the power of Mother Alvardine.”\n  With those words, Apollon fell silent.\n  No answer came from beyond the white curtain.\n“And yet—”\n  Apollon raised his head.\n“If we erase Suseons from existence, we may forever lose the means to break the ‘Curse of Time’.”\n\n　Silence.\n\n  Apollon's gaze turned toward the white lace, but the supreme gods gave no answer. Nor did the deeply wrinkled hand he had seen earlier appear again from beyond the curtain.\n\n“We will go to the material realm.”\n  It was Apollon who broke the silence.\n“We will catch up with Suseons before he can find a vessel, and seal him away within the material realm.”\n  Altemisha, standing beside him, quietly looked at her brother before turning to face the white curtain, just as Apollon had.\n“So that he may never wield that power again.”\n  For a while, no one spoke.\n\n  At last, a voice came from beyond the white curtain.\n“…Go.”\n  It was Alvardine's voice.\n\n＊\n\n  The material realm.\n  A world inhabited by humans and countless other forms of life. The faith of those who lived there was also a source of power for the gods.\n  Driven from the heavenly realm and stripped of his power, Suseons had sought refuge here to gather the faith of this world's inhabitants and reclaim the power he had lost.\n  And in this world, there was not yet a continent known as “Susans.”\n\n  A tiny black hole appeared in the clear blue sky.\n  At first, it was no more than a speck, but it slowly widened. Before long, smoke tinged with blue light began to seep from its depths, hissing—hiss, hiss.\n  Accompanied by a low rumble, the smoke poured forth without end, spreading until it began to engulf the once-clear blue sky.\n  The winds grew violent, the sea began to churn, and soon enormous waves crashed against one another.\n  As sky and sea raged, the black hole continued to expand.\n\n  Several days passed.\n  And at last, an enormous sphere emerged from the depths of the hole.\n  A sphere as black as darkness itself, its surface shrouded in a faint blue glow.\n  Suseons—the God of Time.\n\n  The battle in the heavenly realm had already robbed him of much of his power. And for gods to remain in the material realm, they had to find a suitable “vessel” within this world.\n  The black sphere, wreathed in blue light, drifted slowly through the raging sky—seeking a vessel of his own, so that he might regain his power through the faith of those who dwelled there.\n\n  But before long, the black hole behind him began to glow once more, and two lights burst forth.\n  Apollon Dice and Altemisha Lua—the divine siblings had caught up with Suseons before he could find a vessel of his own in this world.\n\n  Three lights clashed in the raging sky, and once more, a battle among the gods began.\n  Each time the powers of the three gods collided, the heavens trembled, the seas split apart, and blue flashes illuminated the world.\n  But Suseons no longer possessed the power he once had, and this battle did not last nearly as long as the desperate struggle that had unfolded in the heavenly realm.\n  The siblings pursued the fleeing Suseons and finally cornered him. At last, the blue light surrounding the black sphere faded away. All that remained was a sphere of utter darkness, stripped of its light.\n\n  Apollon and Altemisha forced the sphere down into the sea. The waters parted, and the seabed split open with a thunderous roar. Suseons sank into the depths of the vast fissure.　  \n  As the lights of the two gods converged above the fissure, the seabed began to rise, and enormous masses of rock closed over Suseons—thus, the God of Time was sealed away deep beneath the earth of the material realm.\n\n  When it was all over, the raging sea gradually returned to calm.\n  But something now stood where nothing had existed before.\n  In the midst of the vast ocean, an enormous continent had been born. A colossal seal created to prevent the God of Time, who lay dormant deep beneath the earth, from ever emerging into the world again.\n  In essence, the continent itself was the “Gate of Sealing.”\n\n＊\n\n  A long time passed.\n  In time, people would come to inhabit the continent, kingdoms would rise, and countless stories would unfold.\n  And eventually, the people came to name the continent after the god sealed deep beneath the earth—Suseons.\n  The continent of “Susans.” \n  And thus, the stage was set for this story.\n\n\n"},{"id":"page-toc-6","text":"第二章\t英雄たちの時代\n\n\n\n\n【この章の登場人物】\n\n\n\n"}],"currentPageIndex":2,"fontSize":17,"fontChoice":"gothic"},"toc":{"entries":[{"id":1,"level":"part","title":"Part I — The Ancient Age","pageId":"page-root","localStart":0,"localEnd":24,"start":0,"end":24,"anchorText":"Part I — The Ancient Age","headingSize":1.6,"headingFont":"inherit","headingBold":true,"pageBreak":false},{"id":2,"level":"part","title":"Chapter 1 — The Age of Gods","pageId":"page-toc-2","localStart":0,"localEnd":27,"start":26,"end":53,"anchorText":"Chapter 1 — The Age of Gods","headingSize":1.4,"headingFont":"inherit","headingBold":true,"pageBreak":true},{"id":3,"level":"section","title":"Section 1 — Prologue","pageId":"page-toc-2","localStart":29,"localEnd":49,"start":55,"end":75,"anchorText":"Section 1 — Prologue","headingSize":1.2,"headingFont":"inherit","headingBold":true,"pageBreak":false},{"id":4,"level":"part","title":"Section 2 — Alvardine","pageId":"page-toc-4","localStart":0,"localEnd":21,"start":1916,"end":1937,"anchorText":"Section 2 — Alvardine","headingSize":1.2,"headingFont":"inherit","headingBold":true,"pageBreak":true},{"id":5,"level":"part","title":"Section 3 — Suseons","pageId":"page-toc-5","localStart":0,"localEnd":19,"start":5526,"end":5545,"anchorText":"Section 3 — Suseons","headingSize":1.2,"headingFont":"inherit","headingBold":true,"pageBreak":true},{"id":6,"level":"chapter","title":"第二章 英雄たちの時代","pageId":"page-toc-6","localStart":0,"localEnd":11,"start":11851,"end":11862,"anchorText":"第二章\t英雄たちの時代","headingSize":1.4,"headingFont":"inherit","headingBold":true,"pageBreak":true}],"nextId":7},"illustrations":{"entries":[{"id":1,"anchorMode":"unique-text","pageId":"page-toc-4","localStart":2079,"localEnd":2095,"localInsertAt":2095,"start":3995,"end":4011,"insertAt":4011,"anchorText":"through the gap.","name":"1-1_2_Alvardine_sarAlvardi.jpg","fileName":"1-1_2_Alvardine_sarAlvardi.jpg","type":"image/jpeg","align":"center","size":100,"folder":"../image","anchorLost":false,"assetPath":".._image/1-1_2_Alvardine_sarAlvardi.jpg"},{"id":2,"anchorMode":"unique-text","pageId":"page-toc-5","localStart":3970,"localEnd":3994,"localInsertAt":3994,"start":9496,"end":9520,"insertAt":9520,"anchorText":"Suseons—the God of Time.","name":"1-1-3_Suseons.jpg","fileName":"1-1-3_Suseons.jpg","type":"image/jpeg","align":"center","size":100,"folder":"../image","anchorLost":false,"assetPath":".._image/1-1-3_Suseons.jpg"},{"id":3,"anchorMode":"unique-text","pageId":"page-toc-5","localStart":5987,"localEnd":5999,"localInsertAt":5999,"start":11513,"end":11525,"insertAt":11525,"anchorText":"of Sealing.”","name":"1-1-3_SUSANS_TAIRIKU.jpg","fileName":"1-1-3_SUSANS_TAIRIKU.jpg","type":"image/jpeg","align":"center","size":100,"folder":"../image","anchorLost":false,"assetPath":".._image/1-1-3_SUSANS_TAIRIKU.jpg"}],"nextId":4,"folder":".._image"},"music":{"entries":[{"id":1,"illustrationId":1,"action":"play","name":"1-1-2_Alvardine_Salvado","fileName":"1-1-2_Alvardine_Salvado.mp3","type":"audio/mpeg","playMode":"once","folder":"","assetPath":".._music/1-1-2_Alvardine_Salvado.mp3"}],"nextId":2,"folder":".._music"},"cover":{"title":"SUSANS","titleFont":"mincho","titleSize":"44","subtitle":"The Genesis of Susans","credits":[{"label":"著者","value":"閃文太郎"}],"mode":"opera","book":{"coverColor":"#173f35","textColor":"#f3d889","decoration":true,"frameStyle":"double"},"opera":{"curtainColor":"#1c7346","textColor":"#f8e7b0","decoration":true,"style":"grand"}}}</script>
+<script>
+(() => {
+  "use strict";
+
+  const FONT_FAMILIES = {
+    gothic: '"Yu Gothic","Hiragino Kaku Gothic ProN",sans-serif',
+    mincho: '"Yu Mincho","Hiragino Mincho ProN",serif',
+    serif: 'Georgia,"Times New Roman","Yu Mincho",serif'
+  };
+  const COVER_FONT_FAMILIES = {
+    gothic: '"Yu Gothic UI","Yu Gothic",Meiryo,sans-serif',
+    mincho: '"Yu Mincho","Hiragino Mincho ProN",serif',
+    serif: 'Georgia,"Times New Roman","Yu Mincho",serif'
+  };
+  let noperaStartTimer = null;
+
+  let project = null;
+  let pages = [];
+  let tocEntries = [];
+  let illustrations = [];
+  let musicEntries = [];
+  let currentPage = 0;
+  let soundOn = false;
+  let currentAudio = null;
+  let currentAudioEntryId = null;
+  let fadeToken = 0;
+  let triggeredOnPage = new Set();
+  let scrollTicking = false;
+
+  const READER_SETTINGS_KEY = "NOPERA_READER_TEXT_SETTINGS_V1";
+  const BOOKMARK_STORAGE_PREFIX = "NOPERA_READER_BOOKMARK_V1:";
+  let currentWorkKey = null;
+  let currentBookmark = null;
+  let authorTextSettings = { fontChoice:"mincho", fontSize:18, fontWeight:"normal" };
+  let readerTextSettings = null;
+
+  const $ = id => document.getElementById(id);
+  const reading = $("reading"), title = $("storyTitle"), subtitle = $("storySubtitle");
+  const breadcrumb = $("breadcrumb"), pageCount = $("pageCount");
+  const prev = $("prevButton"), next = $("nextButton"), soundButton = $("soundButton");
+  const headerPrev = $("headerPrevButton");
+  const testPrev = $("testPrevButton"), testNext = $("testNextButton"), testPageCount = $("testPageCount");
+  const tocBackdrop = $("tocBackdrop"), tocList = $("tocList");
+  const textBackdrop = $("textBackdrop");
+  const bookmarkBackdrop = $("bookmarkBackdrop");
+
+  function toast(message) {
+    const el = $("toast"); el.textContent = message; el.classList.add("show");
+    clearTimeout(toast.timer); toast.timer = setTimeout(() => el.classList.remove("show"), 1800);
+  }
+
+  function validate(data) {
+    return !!(data && data.format === "NOPERA_TEMP_PROJECT" &&
+      [1,2,3].includes(Number(data.formatVersion)) &&
+      data.manuscript && typeof data.manuscript.fullText === "string" &&
+      data.toc && Array.isArray(data.toc.entries) &&
+      data.illustrations && Array.isArray(data.illustrations.entries));
+  }
+
+  function normalizeProject(data) {
+    const fullText = data.manuscript.fullText || "";
+    let p = Array.isArray(data.manuscript.pages) ? data.manuscript.pages
+      .map(x => ({id:String(x.id || ""), text:String(x.text || "")})).filter(x => x.id) : [];
+    if (!p.length) p = [{id:"page-1", text:fullText}];
+
+    let cursor = 0;
+    p = p.map(x => {
+      const start = cursor; cursor += x.text.length;
+      return {...x, start, end:cursor};
+    });
+
+    const t = data.toc.entries.map(x => ({...x}));
+    const ill = data.illustrations.entries.map(x => ({...x}));
+    const music = data.music && Array.isArray(data.music.entries) ? data.music.entries.map(x => ({
+      ...x, action:x.action === "fadeout" ? "fadeout" : "play"
+    })) : [];
+
+    // v3 page-local positions are authoritative when present.
+    const starts = new Map(p.map(x => [x.id, x.start]));
+    t.forEach(x => {
+      if (x.pageId && starts.has(x.pageId)) {
+        x.start = starts.get(x.pageId) + Math.max(0, Number(x.localStart) || 0);
+        x.end = starts.get(x.pageId) + Math.max(Number(x.localStart)||0, Number(x.localEnd)||0);
+      }
+    });
+    ill.forEach(x => {
+      if (x.pageId && starts.has(x.pageId)) {
+        x.start = starts.get(x.pageId) + Math.max(0, Number(x.localStart) || 0);
+        x.end = starts.get(x.pageId) + Math.max(Number(x.localStart)||0, Number(x.localEnd)||0);
+        x.insertAt = starts.get(x.pageId) + Math.max(0, Number(x.localInsertAt) || 0);
+      }
+    });
+    return {pages:p,toc:t,illustrations:ill,music};
+  }
+
+  function coverSettings() {
+    const c = project && project.cover ? project.cover : {};
+    return c;
+  }
+
+  // Step25：Generator/JSON形式を変更せず、Reader側だけで作品を識別する。
+  // 表紙情報と本文全体から軽量なハッシュを作り、作品ごとに1個のしおりを保存する。
+  function makeWorkKey(data) {
+    const c = data && data.cover ? data.cover : {};
+    const m = data && data.manuscript ? data.manuscript : {};
+    const source = [
+      String(c.title || c.workTitle || ""),
+      String(c.subtitle || ""),
+      String(m.fullText || "")
+    ].join("\u241f");
+    let hash = 2166136261;
+    for (let i = 0; i < source.length; i++) {
+      hash ^= source.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(16).padStart(8,"0");
+  }
+
+  function loadBookmark() {
+    currentBookmark = null;
+    if (!currentWorkKey) return null;
+    try {
+      const raw = localStorage.getItem(BOOKMARK_STORAGE_PREFIX + currentWorkKey);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      const pageIndex = Number(data.pageIndex);
+      if (!Number.isInteger(pageIndex) || pageIndex < 0 || pageIndex >= pages.length) return null;
+      currentBookmark = { pageIndex };
+      return currentBookmark;
+    } catch (e) {
+      console.warn("しおりを読み込めませんでした", e);
+      return null;
+    }
+  }
+
+  function updateBookmarkUi() {
+    const button = $("bookmarkButton");
+    button.disabled = !project || !pages.length;
+
+    const resume = $("noperaBookmarkResume");
+    if (resume) {
+      resume.hidden = !currentBookmark;
+      if (currentBookmark) resume.textContent = `しおりから読む（${currentBookmark.pageIndex + 1}ページ）`;
+    }
+
+    const status = $("bookmarkStatus");
+    const jump = $("bookmarkJump");
+    const remove = $("bookmarkRemove");
+    if (status) {
+      status.textContent = currentBookmark
+        ? `${currentBookmark.pageIndex + 1}ページにしおりがあります。`
+        : "しおりはまだありません。";
+    }
+    if (jump) jump.disabled = !currentBookmark;
+    if (remove) remove.disabled = !currentBookmark;
+  }
+
+  function saveBookmark() {
+    if (!project || !pages.length || !currentWorkKey) return;
+    const data = { pageIndex: currentPage, savedAt: new Date().toISOString() };
+    try {
+      localStorage.setItem(BOOKMARK_STORAGE_PREFIX + currentWorkKey, JSON.stringify(data));
+      currentBookmark = { pageIndex: currentPage };
+      updateBookmarkUi();
+      toast(`${currentPage + 1}ページにしおりを挟みました`);
+    } catch (e) {
+      console.warn("しおりを保存できませんでした", e);
+      toast("しおりを保存できませんでした");
+    }
+  }
+
+  function removeBookmark() {
+    if (!project || !currentWorkKey || !currentBookmark) return;
+    try {
+      localStorage.removeItem(BOOKMARK_STORAGE_PREFIX + currentWorkKey);
+      currentBookmark = null;
+      updateBookmarkUi();
+      toast("しおりを外しました");
+    } catch (e) {
+      console.warn("しおりを外せませんでした", e);
+      toast("しおりを外せませんでした");
+    }
+  }
+
+  function jumpToBookmark() {
+    if (!project || !currentBookmark) return;
+    currentPage = currentBookmark.pageIndex;
+    renderPage(true);
+    toast(`${currentPage + 1}ページのしおりへ移動しました`);
+  }
+
+  function loadReaderTextSettings() {
+    try {
+      const raw = localStorage.getItem(READER_SETTINGS_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      return {
+        fontChoice: FONT_FAMILIES[s.fontChoice] ? s.fontChoice : null,
+        fontSize: Number.isFinite(Number(s.fontSize)) ? Math.min(32, Math.max(14, Number(s.fontSize))) : null,
+        fontWeight: ["normal","600"].includes(String(s.fontWeight)) ? String(s.fontWeight) : null
+      };
+    } catch (e) {
+      console.warn("文字設定を読み込めませんでした", e);
+      return null;
+    }
+  }
+
+  function saveReaderTextSettings() {
+    try {
+      if (readerTextSettings) localStorage.setItem(READER_SETTINGS_KEY, JSON.stringify(readerTextSettings));
+      else localStorage.removeItem(READER_SETTINGS_KEY);
+    } catch (e) {
+      console.warn("文字設定を保存できませんでした", e);
+    }
+  }
+
+  function effectiveTextSettings() {
+    const r = readerTextSettings || {};
+    return {
+      fontChoice: r.fontChoice || authorTextSettings.fontChoice,
+      fontSize: Number(r.fontSize) || authorTextSettings.fontSize,
+      fontWeight: r.fontWeight || authorTextSettings.fontWeight
+    };
+  }
+
+  function applyTextSettings() {
+    const s = effectiveTextSettings();
+    reading.style.fontFamily = FONT_FAMILIES[s.fontChoice] || FONT_FAMILIES.mincho;
+    reading.style.fontSize = s.fontSize + "px";
+    reading.style.fontWeight = s.fontWeight;
+    $("fontSizeValue").textContent = s.fontSize + "px";
+
+    document.querySelectorAll("[data-reader-font]").forEach(btn => {
+      btn.classList.toggle("is-selected", btn.dataset.readerFont === s.fontChoice);
+    });
+    document.querySelectorAll("[data-reader-weight]").forEach(btn => {
+      btn.classList.toggle("is-selected", btn.dataset.readerWeight === s.fontWeight);
+    });
+  }
+
+  function setReaderSetting(key, value) {
+    const base = effectiveTextSettings();
+    readerTextSettings = {
+      fontChoice: base.fontChoice,
+      fontSize: base.fontSize,
+      fontWeight: base.fontWeight,
+      [key]: value
+    };
+    saveReaderTextSettings();
+    applyTextSettings();
+  }
+
+
+  function fillCoverCredits(target, credits) {
+    target.replaceChildren();
+    (Array.isArray(credits) ? credits : []).forEach(item => {
+      const label = typeof item?.label === "string" ? item.label.trim() : "";
+      const value = typeof item?.value === "string" ? item.value.trim() : "";
+      if (!label && !value) return;
+      const line = document.createElement("div");
+      line.textContent = label && value ? `${label}：${value}` : (label || value);
+      target.appendChild(line);
+    });
+  }
+
+  function normalizedCover() {
+    const c = coverSettings();
+    return {
+      title: typeof c.title === "string" && c.title.trim() ? c.title.trim() : "タイトル",
+      titleFont: COVER_FONT_FAMILIES[c.titleFont] ? c.titleFont : "mincho",
+      titleSize: Math.max(18, Math.min(72, Number(c.titleSize) || 44)),
+      subtitle: typeof c.subtitle === "string" ? c.subtitle.trim() : "",
+      credits: Array.isArray(c.credits) ? c.credits : [],
+      mode: c.mode === "opera" ? "opera" : "book",
+      book: {
+        coverColor: c.book && typeof c.book.coverColor === "string" ? c.book.coverColor : "#173f35",
+        textColor: c.book && typeof c.book.textColor === "string" ? c.book.textColor : "#f3d889",
+        decoration: !(c.book && c.book.decoration === false),
+        frameStyle: c.book && ["single","double","classic","arched","geometric","japanese"].includes(c.book.frameStyle) ? c.book.frameStyle : "double"
+      },
+      opera: {
+        curtainColor: c.opera && typeof c.opera.curtainColor === "string" ? c.opera.curtainColor : "#741c28",
+        textColor: c.opera && typeof c.opera.textColor === "string" ? c.opera.textColor : "#f8e7b0",
+        decoration: !(c.opera && c.opera.decoration === false),
+        style: c.opera && ["classic","grand","soft","dark","modern"].includes(c.opera.style) ? c.opera.style : "classic"
+      }
+    };
+  }
+
+  function clearCoverClasses(el) {
+    ["single","double","classic","arched","geometric","japanese"].forEach(x => el.classList.remove("book-frame-"+x));
+    ["classic","grand","soft","dark","modern"].forEach(x => el.classList.remove("opera-style-"+x));
+  }
+
+  function showProjectCover() {
+    const c = normalizedCover();
+    const gate = $("noperaCoverGate"), stage = $("noperaCoverStage");
+    clearCoverClasses(stage);
+    stage.classList.toggle("is-book", c.mode === "book");
+    stage.classList.toggle("is-opera", c.mode === "opera");
+    $("noperaCoverTitle").textContent = c.title;
+    $("noperaCoverSubtitle").textContent = c.subtitle;
+    $("noperaCoverSubtitle").hidden = !c.subtitle;
+    $("noperaCoverTitle").style.fontFamily = COVER_FONT_FAMILIES[c.titleFont];
+    $("noperaCoverTitle").style.fontSize = c.titleSize + "px";
+    fillCoverCredits($("noperaCoverCredits"), c.credits);
+
+    const color = c.mode === "book" ? c.book.textColor : c.opera.textColor;
+    stage.style.color = color;
+    $("noperaCoverTitle").style.color = color;
+    $("noperaCoverSubtitle").style.color = color;
+    $("noperaCoverCredits").style.color = color;
+
+    if (c.mode === "book") {
+      stage.style.setProperty("--nopera-book-cover-color", c.book.coverColor);
+      stage.style.background = c.book.coverColor;
+      stage.classList.add("book-frame-" + c.book.frameStyle);
+      stage.querySelector(".nopera-book-frame-layer").hidden = !c.book.decoration;
+    } else {
+      stage.style.background = "";
+      stage.style.setProperty("--nopera-start-curtain", c.opera.curtainColor);
+      stage.classList.add("opera-style-" + c.opera.style);
+      stage.querySelector(".nopera-book-frame-layer").hidden = true;
+      stage.querySelectorAll(".nopera-cover-curtain").forEach(el => {
+        el.style.borderBottomColor = c.opera.decoration ? "#d6b85f" : "transparent";
+      });
+    }
+
+    gate.hidden = false;
+    gate.setAttribute("aria-hidden","false");
+    $("noperaCoverStart").focus({preventScroll:true});
+  }
+
+  function closeStartExperience() {
+    if (noperaStartTimer) { clearTimeout(noperaStartTimer); noperaStartTimer = null; }
+    const exp = $("noperaStartExperience");
+    exp.hidden = true; exp.setAttribute("aria-hidden","true"); exp.classList.remove("is-finishing");
+    $("noperaStartBook").classList.remove("is-opening");
+    $("noperaStartOpera").classList.remove("is-opening");
+    $("noperaStartBook").hidden = true; $("noperaStartOpera").hidden = true;
+  }
+
+  function finishStartExperience(delay) {
+    noperaStartTimer = setTimeout(() => {
+      $("noperaStartExperience").classList.add("is-finishing");
+      noperaStartTimer = setTimeout(() => {
+        closeStartExperience();
+        window.scrollTo({top:0,left:0,behavior:"auto"});
+        requestAnimationFrame(checkMusicTriggers);
+      }, 520);
+    }, delay);
+  }
+
+  function startProjectExperience() {
+    if (!project) return;
+    closeStartExperience();
+
+    // Step24-1：表紙は「最初から読む」入口。
+    // Generatorの currentPageIndex は編集再開情報として保持し、
+    // Readerの開始ページには使わない。
+    currentPage = 0;
+    renderPage(false);
+    window.scrollTo({top:0,left:0,behavior:"auto"});
+
+    const c = normalizedCover();
+    const gate = $("noperaCoverGate");
+    gate.hidden = true; gate.setAttribute("aria-hidden","true");
+
+    // Generatorと同じ仕様：［物語をはじめる］というユーザー操作でSOUND ON。
+    soundOn = true;
+    updateSoundButton();
+
+    const exp = $("noperaStartExperience");
+    exp.hidden = false; exp.setAttribute("aria-hidden","false");
+
+    if (c.mode === "opera") {
+      const scene = $("noperaStartOpera");
+      scene.hidden = false;
+      $("noperaStartOperaTitle").textContent = c.title;
+      $("noperaStartOperaSubtitle").textContent = c.subtitle;
+      $("noperaStartOperaSubtitle").hidden = !c.subtitle;
+      $("noperaStartOperaTitle").style.fontFamily = COVER_FONT_FAMILIES[c.titleFont];
+      $("noperaStartOperaTitle").style.fontSize = `clamp(18px,6vw,${Math.min(82,c.titleSize+10)}px)`;
+      [$("noperaStartOperaTitle"),$("noperaStartOperaSubtitle"),$("noperaStartOperaCredits")].forEach(el => el.style.color = c.opera.textColor);
+      fillCoverCredits($("noperaStartOperaCredits"), c.credits);
+      scene.style.setProperty("--nopera-start-curtain", c.opera.curtainColor);
+      clearCoverClasses(scene); scene.classList.add("opera-style-" + c.opera.style);
+      [$("noperaStartOperaLeft"),$("noperaStartOperaRight"),$("noperaStartOperaValance")].forEach(el => {
+        el.style.borderBottomColor = c.opera.decoration ? "#d6b85f" : "transparent";
+      });
+      requestAnimationFrame(() => requestAnimationFrame(() => scene.classList.add("is-opening")));
+      finishStartExperience(1900);
+    } else {
+      const scene = $("noperaStartBook"), cover = $("noperaStartBookCover");
+      scene.hidden = false;
+      $("noperaStartBookTitle").textContent = c.title;
+      $("noperaStartBookSubtitle").textContent = c.subtitle;
+      $("noperaStartBookSubtitle").hidden = !c.subtitle;
+      $("noperaStartBookTitle").style.fontFamily = COVER_FONT_FAMILIES[c.titleFont];
+      $("noperaStartBookTitle").style.fontSize = `clamp(18px,5vw,${c.titleSize}px)`;
+      [$("noperaStartBookTitle"),$("noperaStartBookSubtitle"),$("noperaStartBookCredits")].forEach(el => el.style.color = c.book.textColor);
+      fillCoverCredits($("noperaStartBookCredits"), c.credits);
+      cover.style.setProperty("--nopera-book-cover-color", c.book.coverColor);
+      clearCoverClasses(cover); cover.classList.add("book-frame-" + c.book.frameStyle);
+      cover.querySelector(".nopera-start-book-border").hidden = !c.book.decoration;
+      cover.querySelector(".nopera-book-frame-layer").hidden = !c.book.decoration;
+      requestAnimationFrame(() => requestAnimationFrame(() => scene.classList.add("is-opening")));
+      noperaStartTimer = setTimeout(() => {
+        closeStartExperience();
+        window.scrollTo({top:0,left:0,behavior:"auto"});
+        requestAnimationFrame(checkMusicTriggers);
+      }, 2150);
+    }
+  }
+
+  function applyProject(data) {
+    if (!validate(data)) throw new Error("NOPERAのプロジェクトファイルではありません。");
+    project = data;
+    const n = normalizeProject(data);
+    pages = n.pages; tocEntries = n.toc; illustrations = n.illustrations; musicEntries = n.music;
+    currentWorkKey = makeWorkKey(data);
+    currentPage = Math.min(Math.max(0, Number(data.manuscript.currentPageIndex)||0), pages.length-1);
+    loadBookmark();
+    updateBookmarkUi();
+
+    const c = coverSettings();
+    title.textContent = c.title || c.workTitle || "NOPERA";
+    subtitle.textContent = c.subtitle || "";
+    subtitle.hidden = !subtitle.textContent;
+
+    const fontChoice = FONT_FAMILIES[data.manuscript.fontChoice] ? data.manuscript.fontChoice : "mincho";
+    const rawFs = Number(data.manuscript.fontSize);
+    const fs = Number.isFinite(rawFs) && rawFs >= 12 && rawFs <= 36 ? rawFs : 18;
+    authorTextSettings = { fontChoice, fontSize:fs, fontWeight:"normal" };
+    readerTextSettings = loadReaderTextSettings();
+    applyTextSettings();
+
+    buildToc();
+    stopAudioImmediate();
+    soundOn = false; updateSoundButton();
+    renderPage(false);
+    showProjectCover();
+    toast("プロジェクトを読み込みました");
+  }
+
+  function pageForEntry(entry) {
+    if (entry.pageId) {
+      const idx = pages.findIndex(p => p.id === entry.pageId);
+      if (idx >= 0) return idx;
+    }
+    const pos = Number(entry.start);
+    if (!Number.isFinite(pos)) return 0;
+    return Math.max(0, pages.findIndex((p,i) => pos >= p.start && (pos < p.end || i === pages.length-1)));
+  }
+
+  function buildToc() {
+    tocList.replaceChildren();
+
+    const coverButton = document.createElement("button");
+    coverButton.type = "button";
+    coverButton.className = "toc-item toc-cover-item";
+    coverButton.textContent = "表紙へ";
+    coverButton.addEventListener("click", () => {
+      closeToc();
+      showProjectCover();
+    });
+    tocList.appendChild(coverButton);
+
+    const valid = tocEntries.filter(x => !x.anchorLost);
+    if (!valid.length) {
+      const e = document.createElement("div"); e.className="toc-empty"; e.textContent="目次は登録されていません。"; tocList.appendChild(e); return;
+    }
+    valid.sort((a,b) => (Number(a.start)||0)-(Number(b.start)||0)).forEach(entry => {
+      const b = document.createElement("button"); b.type="button";
+      const levelMap = { part:1, chapter:2, section:3 };
+      const level = levelMap[entry.level] || 1;
+      b.className = "toc-item level-" + level;
+      b.textContent = entry.title || entry.anchorText || "目次";
+      b.addEventListener("click", () => {
+        currentPage = pageForEntry(entry); closeToc(); renderPage(true);
+      });
+      tocList.appendChild(b);
+    });
+  }
+
+  function headingAt(absFrom, absTo) {
+    return tocEntries.find(h => !h.anchorLost && Number(h.start) === absFrom && Number(h.end) === absTo);
+  }
+
+  function createHeadingText(textValue, entry) {
+    if (!entry) return document.createTextNode(textValue);
+    const span = document.createElement("span"); span.className="heading"; span.textContent=textValue;
+    const size = Number(entry.headingSize)||1;
+    span.style.fontSize = size + "em";
+    if (entry.headingFont && entry.headingFont !== "inherit" && FONT_FAMILIES[entry.headingFont]) span.style.fontFamily = FONT_FAMILIES[entry.headingFont];
+    span.style.fontWeight = entry.headingBold ? "700" : "inherit";
+    return span;
+  }
+
+  function createIllustration(entry) {
+    const fig = document.createElement("span"); fig.className="ill";
+    fig.dataset.align = entry.align || "center"; fig.dataset.illustrationId = String(entry.id);
+    const size = Math.min(100, Math.max(20, Number(entry.size)||80));
+    fig.style.width = size + "%"; fig.style.maxWidth = size + "%";
+    const img = document.createElement("img"); img.src = (entry.assetPath || entry.dataUrl || ""); img.alt = entry.name || "挿絵"; img.draggable=false;
+    fig.appendChild(img); return fig;
+  }
+
+  function renderPage(scrollTop=true) {
+    if (!pages.length) return;
+    const page = pages[currentPage];
+    const textValue = page.text;
+    reading.replaceChildren();
+    triggeredOnPage = new Set();
+
+    const pageIll = illustrations.filter(x => !x.anchorLost && Number(x.insertAt) >= page.start && Number(x.insertAt) <= page.end)
+      .sort((a,b)=>(Number(a.insertAt)||0)-(Number(b.insertAt)||0));
+    const pageHead = tocEntries.filter(x => !x.anchorLost && Number(x.end)>page.start && Number(x.start)<page.end)
+      .sort((a,b)=>(Number(a.start)||0)-(Number(b.start)||0));
+
+    const boundaries = new Set([0,textValue.length]);
+    pageIll.forEach(x => boundaries.add(Math.max(0,Math.min(textValue.length,Number(x.insertAt)-page.start))));
+    pageHead.forEach(x => {
+      boundaries.add(Math.max(0,Math.min(textValue.length,Number(x.start)-page.start)));
+      boundaries.add(Math.max(0,Math.min(textValue.length,Number(x.end)-page.start)));
+    });
+    const points=[...boundaries].sort((a,b)=>a-b);
+    const illMap=new Map();
+    pageIll.forEach(x => {
+      const o=Math.max(0,Math.min(textValue.length,Number(x.insertAt)-page.start));
+      if(!illMap.has(o)) illMap.set(o,[]); illMap.get(o).push(x);
+    });
+
+    for(let i=0;i<points.length;i++){
+      const from=points[i];
+      (illMap.get(from)||[]).forEach(x=>reading.appendChild(createIllustration(x)));
+      if(i>=points.length-1) continue;
+      const to=points[i+1]; if(to<=from) continue;
+      const absFrom=page.start+from, absTo=page.start+to;
+      const h=pageHead.find(x => Number(x.start)<=absFrom && Number(x.end)>=absTo);
+      reading.appendChild(createHeadingText(textValue.slice(from,to),h));
+    }
+    const clear=document.createElement("div"); clear.className="page-clear"; reading.appendChild(clear);
+
+    pageCount.textContent=(currentPage+1)+" / "+pages.length+" ページ";
+    testPageCount.textContent=(currentPage+1)+" / "+pages.length;
+    prev.disabled=currentPage===0; next.disabled=currentPage>=pages.length-1;
+    headerPrev.disabled=currentPage===0;
+    testPrev.disabled=currentPage===0; testNext.disabled=currentPage>=pages.length-1;
+    updateBreadcrumb(page);
+    if(scrollTop) window.scrollTo({top:0,left:0,behavior:"auto"});
+    requestAnimationFrame(checkMusicTriggers);
+  }
+
+  function updateBreadcrumb(page) {
+    const currentPageOrder = currentPage;
+    const hierarchy = { part:null, chapter:null, section:null };
+    const entries = tocEntries
+      .filter(entry => !entry.anchorLost && entry.pageId)
+      .map(entry => ({
+        entry,
+        pageOrder: pages.findIndex(p => p.id === entry.pageId),
+        localStart: Number(entry.localStart) || 0
+      }))
+      .filter(item => item.pageOrder >= 0 &&
+        (item.pageOrder < currentPageOrder ||
+        (item.pageOrder === currentPageOrder && item.localStart <= 0)))
+      .sort((a,b) => a.pageOrder - b.pageOrder ||
+        a.localStart - b.localStart ||
+        (Number(a.entry.id)||0) - (Number(b.entry.id)||0));
+
+    entries.forEach(({entry}) => {
+      if(entry.level === "part"){
+        hierarchy.part = entry;
+        hierarchy.chapter = null;
+        hierarchy.section = null;
+      }else if(entry.level === "chapter"){
+        hierarchy.chapter = entry;
+        hierarchy.section = null;
+      }else if(entry.level === "section"){
+        hierarchy.section = entry;
+      }
+    });
+
+    const labels = [hierarchy.part, hierarchy.chapter, hierarchy.section]
+      .filter(Boolean)
+      .map(entry => entry.title || entry.anchorText || "");
+    breadcrumb.textContent = "現在地：" + (labels.length ? labels.join(" ＞ ") : "目次未設定");
+    breadcrumb.title = labels.length ? labels.join(" ＞ ") : "目次未設定";
+  }
+
+  function updateSoundButton() {
+    soundButton.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    soundButton.classList.toggle("is-on",soundOn); soundButton.setAttribute("aria-pressed",String(soundOn));
+  }
+
+  function stopAudioImmediate() {
+    fadeToken++;
+    if(currentAudio){ currentAudio.pause(); currentAudio.currentTime=0; currentAudio.volume=1; }
+    currentAudio=null; currentAudioEntryId=null;
+  }
+
+  async function fadeOut(seconds, stop=true) {
+    if(!currentAudio) return;
+    const audio=currentAudio, token=++fadeToken, startVolume=audio.volume, start=performance.now();
+    return new Promise(resolve => {
+      function frame(now){
+        if(token!==fadeToken || audio!==currentAudio){ resolve(); return; }
+        const p=Math.min(1,(now-start)/(seconds*1000)); audio.volume=Math.max(0,startVolume*(1-p));
+        if(p<1){ requestAnimationFrame(frame); }
+        else{
+          if(stop){ audio.pause(); audio.currentTime=0; if(audio===currentAudio){currentAudio=null;currentAudioEntryId=null;} }
+          audio.volume=1; resolve();
+        }
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  async function playMusic(entry) {
+    if(!soundOn || !(entry.assetPath || entry.dataUrl)) return;
+    if(currentAudioEntryId===entry.id && currentAudio && !currentAudio.paused) return;
+    if(currentAudio) await fadeOut(3,true);
+    if(!soundOn) return;
+    const audio=new Audio(entry.assetPath || entry.dataUrl); audio.loop=entry.playMode==="loop"; audio.volume=1;
+    currentAudio=audio; currentAudioEntryId=entry.id;
+    audio.addEventListener("ended",()=>{ if(currentAudio===audio){currentAudio=null;currentAudioEntryId=null;} });
+    try{ await audio.play(); }catch(e){ console.warn(e); toast("音楽を再生できませんでした"); }
+  }
+
+  function triggerForIllustration(id) {
+    const entry=musicEntries.find(x=>Number(x.illustrationId)===Number(id));
+    if(!entry || triggeredOnPage.has(entry.id)) return;
+    triggeredOnPage.add(entry.id);
+    if(entry.action==="fadeout"){ if(soundOn) fadeOut(5,true); }
+    else playMusic(entry);
+  }
+
+  function checkMusicTriggers() {
+    scrollTicking=false;
+    if(!soundOn) return;
+    const center=window.innerHeight/2;
+    document.querySelectorAll(".ill[data-illustration-id]").forEach(el=>{
+      const r=el.getBoundingClientRect();
+      if(r.top<=center && r.bottom>=center) triggerForIllustration(el.dataset.illustrationId);
+    });
+  }
+
+  window.addEventListener("scroll",()=>{
+    if(!scrollTicking){scrollTicking=true;requestAnimationFrame(checkMusicTriggers);}
+  },{passive:true});
+  window.addEventListener("resize",()=>{
+    if(!scrollTicking){scrollTicking=true;requestAnimationFrame(checkMusicTriggers);}
+  });
+
+  soundButton.addEventListener("click",()=>{
+    soundOn=!soundOn; updateSoundButton();
+    if(!soundOn) stopAudioImmediate();
+    else { triggeredOnPage.clear(); requestAnimationFrame(checkMusicTriggers); }
+  });
+  function goToPage(index){
+    const target=Math.max(0,Math.min(pages.length-1,index));
+    if(!pages.length || target===currentPage) return;
+    currentPage=target;
+    renderPage(true);
+  }
+
+  prev.addEventListener("click",()=>goToPage(currentPage-1));
+  headerPrev.addEventListener("click",()=>goToPage(currentPage-1));
+  next.addEventListener("click",()=>goToPage(currentPage+1));
+  testPrev.addEventListener("click",()=>goToPage(currentPage-1));
+  testNext.addEventListener("click",()=>goToPage(currentPage+1));
+
+  function openToc(){tocBackdrop.classList.add("open");tocBackdrop.setAttribute("aria-hidden","false");$("tocClose").focus();}
+  function closeToc(){tocBackdrop.classList.remove("open");tocBackdrop.setAttribute("aria-hidden","true");$("tocButton").focus();}
+  $("tocButton").addEventListener("click",openToc); $("tocClose").addEventListener("click",closeToc);
+  tocBackdrop.addEventListener("click",e=>{if(e.target===tocBackdrop)closeToc();});
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape") return;
+    if(bookmarkBackdrop.classList.contains("open")) closeBookmarkMenu();
+    else if(textBackdrop.classList.contains("open")) closeTextSettings();
+    else if(tocBackdrop.classList.contains("open")) closeToc();
+  });
+
+  function openBookmarkMenu(){
+    if (!project || !pages.length) return;
+    updateBookmarkUi();
+    bookmarkBackdrop.classList.add("open");
+    bookmarkBackdrop.setAttribute("aria-hidden","false");
+    $("bookmarkClose").focus();
+  }
+  function closeBookmarkMenu(){
+    bookmarkBackdrop.classList.remove("open");
+    bookmarkBackdrop.setAttribute("aria-hidden","true");
+    $("bookmarkButton").focus();
+  }
+
+  $("bookmarkButton").addEventListener("click",openBookmarkMenu);
+  $("bookmarkClose").addEventListener("click",closeBookmarkMenu);
+  bookmarkBackdrop.addEventListener("click",e=>{if(e.target===bookmarkBackdrop)closeBookmarkMenu();});
+  $("bookmarkSaveHere").addEventListener("click",()=>{
+    saveBookmark();
+    updateBookmarkUi();
+  });
+  $("bookmarkJump").addEventListener("click",()=>{
+    jumpToBookmark();
+    closeBookmarkMenu();
+  });
+  $("bookmarkRemove").addEventListener("click",()=>{
+    removeBookmark();
+    updateBookmarkUi();
+  });
+
+  function openTextSettings(){
+    textBackdrop.classList.add("open");
+    textBackdrop.setAttribute("aria-hidden","false");
+    applyTextSettings();
+    $("textSettingsClose").focus();
+  }
+  function closeTextSettings(){
+    textBackdrop.classList.remove("open");
+    textBackdrop.setAttribute("aria-hidden","true");
+    $("textSettingsButton").focus();
+  }
+
+  $("textSettingsButton").addEventListener("click",openTextSettings);
+  $("textSettingsClose").addEventListener("click",closeTextSettings);
+  textBackdrop.addEventListener("click",e=>{if(e.target===textBackdrop)closeTextSettings();});
+
+  $("fontSizeDown").addEventListener("click",()=>{
+    const s=effectiveTextSettings();
+    setReaderSetting("fontSize",Math.max(14,s.fontSize-2));
+  });
+  $("fontSizeUp").addEventListener("click",()=>{
+    const s=effectiveTextSettings();
+    setReaderSetting("fontSize",Math.min(32,s.fontSize+2));
+  });
+  document.querySelectorAll("[data-reader-font]").forEach(btn=>{
+    btn.addEventListener("click",()=>setReaderSetting("fontChoice",btn.dataset.readerFont));
+  });
+  document.querySelectorAll("[data-reader-weight]").forEach(btn=>{
+    btn.addEventListener("click",()=>setReaderSetting("fontWeight",btn.dataset.readerWeight));
+  });
+  $("resetAuthorTextSettings").addEventListener("click",()=>{
+    readerTextSettings=null;
+    saveReaderTextSettings();
+    applyTextSettings();
+    toast("作者設定に戻しました");
+  });
+
+  $("noperaCoverStart").addEventListener("click", startProjectExperience);
+  $("noperaBookmarkResume").addEventListener("click", () => {
+    if (!project || !currentBookmark) return;
+    closeStartExperience();
+    $("noperaCoverGate").hidden = true;
+    $("noperaCoverGate").setAttribute("aria-hidden","true");
+    soundOn = true;
+    updateSoundButton();
+    currentPage = currentBookmark.pageIndex;
+    renderPage(true);
+    toast(`${currentPage + 1}ページのしおりから再開しました`);
+  });
+
+  // Public output auto-loads the embedded editing metadata (no file picker needed).
+  const publicProjectNode = $("nopera-public-project");
+  if (publicProjectNode && publicProjectNode.textContent.trim() !== "__NOPERA_PUBLIC_PROJECT_JSON__") {
+    try { applyProject(JSON.parse(publicProjectNode.textContent)); }
+    catch (error) { console.error(error); toast("作品の読み込みに失敗しました"); }
+  }
+  $("loadButton").addEventListener("click",()=>$("projectInput").click());
+  $("projectInput").addEventListener("change",e=>{
+    const file=e.target.files&&e.target.files[0]; e.target.value=""; if(!file)return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      try{applyProject(JSON.parse(String(reader.result||"")));}catch(err){console.error(err);toast(err.message||"読み込みに失敗しました");}
+    };
+    reader.onerror=()=>toast("ファイルを読み込めませんでした");
+    reader.readAsText(file);
+  });
+})();
+</script>
+</body>
+</html>
